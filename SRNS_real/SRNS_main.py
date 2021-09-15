@@ -56,7 +56,7 @@ def parse_args():
                         help='warmup')
     parser.add_argument('--S1', type=int, default=20,
                         help='size of cache for final sample')
-    parser.add_argument('--varset_size', type=int, default=3000,
+    parser.add_argument('--varset_size', type=int, default=100,
                         help='size of candidate for var monitor')
     parser.add_argument('--fix_seed', action='store_true', default=False,
                         help='fix random seed')
@@ -122,10 +122,10 @@ def training(model, args, train_data, val_data, test_data, test_data_neg, num_us
         logging.info("Before trianing, val data, Recall = %.4f/%.4f, NDCG = %.4f/%.4f" % (Recall[0], Recall[1], NDCG[0], NDCG[1]))
 
         score_cand_cur = np.array(
-            [EvalUser.predict_fast(model, sess, num_user, num_item, parallel_users=20, predict_data=candidate_cur)])
+            [EvalUser.predict_fast(model, sess, num_user, num_item, parallel_users=100, predict_data=candidate_cur)])
         score_cand_nxt = [np.zeros((0, num_user, args.varset_size)) for _ in range(5)]
         score_pos_cur = np.array(
-            [EvalUser.predict_pos(model, sess, num_user, max_posid, parallel_users=20, predict_data=train_pos)])
+            [EvalUser.predict_pos(model, sess, num_user, max_posid, parallel_users=100, predict_data=train_pos)])
 
         Metric_best = 0
         stop_counter = 0
