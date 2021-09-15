@@ -143,13 +143,14 @@ def training(model, args, train_data, test_data, num_user, num_item):
                                         score_cand_cur, score_pos_cur, Mu_idx, candidate_cur, train_iddict)
             train_time = time() - train_begin
 
-            valid_begin = time()
-            Recall, NDCG = EvalUser.eval(model, sess, train_mat, test_set, num_user, num_item)
-            valid_time = time() - valid_begin
-            print("Epoch %d [%.1fs]: loss=%.4f, Recall = %.4f/%.4f/%.4f, NDCG = %.4f/%.4f/%.4f [%.1fs]" % (
-            epoch_count + 1, train_time, loss, Recall[0], Recall[1], Recall[2], NDCG[0], NDCG[1], NDCG[2], valid_time))
-            logging.info("Epoch %d [%.1fs]: loss=%.4f, Recall = %.4f/%.4f/%.4f, NDCG = %.4f/%.4f/%.4f [%.1fs]" % (
-            epoch_count + 1, train_time, loss, Recall[0], Recall[1], Recall[2], NDCG[0], NDCG[1], NDCG[2], valid_time))
+            if (epoch_count+1) % 10 == 0:
+                valid_begin = time()
+                Recall, NDCG = EvalUser.eval(model, sess, train_mat, test_set, num_user, num_item)
+                valid_time = time() - valid_begin
+                print("Epoch %d [%.1fs]: loss=%.4f, Recall = %.4f/%.4f/%.4f, NDCG = %.4f/%.4f/%.4f [%.1fs]" % (
+                epoch_count + 1, train_time, loss, Recall[0], Recall[1], Recall[2], NDCG[0], NDCG[1], NDCG[2], valid_time))
+                logging.info("Epoch %d [%.1fs]: loss=%.4f, Recall = %.4f/%.4f/%.4f, NDCG = %.4f/%.4f/%.4f [%.1fs]" % (
+                epoch_count + 1, train_time, loss, Recall[0], Recall[1], Recall[2], NDCG[0], NDCG[1], NDCG[2], valid_time))
 
             score_1epoch_nxt = []
             for c in range(5):
