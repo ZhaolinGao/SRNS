@@ -58,7 +58,7 @@ def eval(model, sess, train_data, test_data, num_user, num_item):
 
         feed_dict = {model.user_input:users,
                      model.item_input_pos:items}
-        predictions.append(np.reshape(sess.run([model.score],feed_dict),[size, item_num]))
+        predictions.append(np.reshape(sess.run([model.score],feed_dict),[size, num_item]))
 
     predictions = np.concatenate(predictions, axis=0)
 
