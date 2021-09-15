@@ -406,7 +406,8 @@ def run():
             for item in items:
                 test_data.append([user, item])
 
-
+    train_data = np.array(train_data)
+    test_data = np.array(test_data)
     num_user = max(np.max(train_data[:, 0]), np.max(test_data[:, 0])) + 1
     num_item = max(np.max(train_data[:, 1]), np.max(test_data[:, 1])) + 1
 
