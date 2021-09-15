@@ -15,6 +15,7 @@ from time import time
 from multiprocessing import Pool
 import setproctitle
 import pickle
+import scipy.sparse as sp
 
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -62,13 +63,15 @@ def parse_args():
                         help='fix random seed')
     parser.add_argument('--model_file', type=str, default="model/model.pkl",
                         help='model file path')
+    parser.add_argument('--dataset', type=str, default="TAFA-digital-music",
+                        help='model file path')
     parser.add_argument('--S2_div_S1', type=int, default=1,
                         help='cache size of cache than cache1')
     return parser.parse_args()
 
 
 
-def training(model, args, train_data, val_data, test_data, test_data_neg, num_user, num_item):
+def training(model, args, train_data, test_data, num_user, num_item):
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
 
@@ -79,11 +82,14 @@ def training(model, args, train_data, val_data, test_data, test_data_neg, num_us
 
         # init the train_set, test_set
         train_set = defaultdict(set)
+        train_mat = sp.dok_matrix((num_user, num_item), dtype=np.float32)
         for i in range(train_data.shape[0]):
             train_set[train_data[i, 0]].add(train_data[i, 1])
+            train_mat[train_data[i, 0], train_data[i, 1]] = 1.0
         test_set = defaultdict(set)
         for i in range(test_data.shape[0]):
             test_set[test_data[i, 0]].add(test_data[i, 1])
+            
 
         # init the train_iddict [u] pos->id
         train_iddict = [defaultdict(int) for _ in range(num_user)]
@@ -117,9 +123,9 @@ def training(model, args, train_data, val_data, test_data, test_data_neg, num_us
             Mu_idx_tmp = random.sample(list(range(args.varset_size)), args.S1)
             Mu_idx.append(Mu_idx_tmp)
 
-        Recall, NDCG = EvalUser.eval(model, sess, val_data, test_data_neg)
-        print("Before trianing, val data, Recall = %.4f/%.4f, NDCG = %.4f/%.4f" % (Recall[0], Recall[1], NDCG[0], NDCG[1]))
-        logging.info("Before trianing, val data, Recall = %.4f/%.4f, NDCG = %.4f/%.4f" % (Recall[0], Recall[1], NDCG[0], NDCG[1]))
+        Recall, NDCG = EvalUser.eval(model, sess, train_mat, test_set, num_user, num_item)
+        print("Before trianing, val data, Recall = %.4f/%.4f/%.4f, NDCG = %.4f/%.4f/%.4f" % (Recall[0], Recall[1], Recall[2], NDCG[0], NDCG[1], NDCG[2]))
+        logging.info("Before trianing, val data, Recall = %.4f/%.4f/%.4f, NDCG = %.4f/%.4f/%.4f" % (Recall[0], Recall[1], Recall[2], NDCG[0], NDCG[1], NDCG[2]))
 
         score_cand_cur = np.array(
             [EvalUser.predict_fast(model, sess, num_user, num_item, parallel_users=100, predict_data=candidate_cur)])
@@ -138,12 +144,12 @@ def training(model, args, train_data, val_data, test_data, test_data_neg, num_us
             train_time = time() - train_begin
 
             valid_begin = time()
-            Recall, NDCG = EvalUser.eval(model, sess, val_data, test_data_neg)
+            Recall, NDCG = EvalUser.eval(model, sess, train_mat, test_set, num_user, num_item)
             valid_time = time() - valid_begin
-            print("Epoch %d [%.1fs]: loss=%.4f, Recall = %.4f/%.4f, NDCG = %.4f/%.4f [%.1fs]" % (
-            epoch_count + 1, train_time, loss, Recall[0], Recall[1], NDCG[0], NDCG[1], valid_time))
-            logging.info("Epoch %d [%.1fs]: loss=%.4f, Recall = %.4f/%.4f, NDCG = %.4f/%.4f [%.1fs]" % (
-            epoch_count + 1, train_time, loss, Recall[0], Recall[1], NDCG[0], NDCG[1], valid_time))
+            print("Epoch %d [%.1fs]: loss=%.4f, Recall = %.4f/%.4f/%.4f, NDCG = %.4f/%.4f/%.4f [%.1fs]" % (
+            epoch_count + 1, train_time, loss, Recall[0], Recall[1], Recall[2], NDCG[0], NDCG[1], NDCG[2], valid_time))
+            logging.info("Epoch %d [%.1fs]: loss=%.4f, Recall = %.4f/%.4f/%.4f, NDCG = %.4f/%.4f/%.4f [%.1fs]" % (
+            epoch_count + 1, train_time, loss, Recall[0], Recall[1], Recall[2], NDCG[0], NDCG[1], NDCG[2], valid_time))
 
             score_1epoch_nxt = []
             for c in range(5):
@@ -193,9 +199,9 @@ def training(model, args, train_data, val_data, test_data, test_data_neg, num_us
         sess.run(tf.assign(model.embeddingmap_user, Model_byR1_param[0]))
         sess.run(tf.assign(model.embeddingmap_item, Model_byR1_param[1]))
         sess.run(tf.assign(model.h, Model_byR1_param[2]))
-        Recall, NDCG = EvalUser.eval(model, sess, test_data, test_data_neg)
-        print("Test data via Model_byR1_param: Recall = %.4f/%.4f, NDCG = %.4f/%.4f" % (Recall[0], Recall[1], NDCG[0], NDCG[1]))
-        logging.info("Test data via Model_byR1_param: Recall = %.4f/%.4f, NDCG = %.4f/%.4f" % (Recall[0], Recall[1], NDCG[0], NDCG[1]))
+        Recall, NDCG = EvalUser.eval(model, sess, train_mat, test_set, num_user, num_item)
+        print("Test data via Model_byR1_param: Recall = %.4f/%.4f/%.4f, NDCG = %.4f/%.4f/%.4f" % (Recall[0], Recall[1], Recall[2], NDCG[0], NDCG[1], NDCG[2]))
+        logging.info("Test data via Model_byR1_param: Recall = %.4f/%.4f/%.4f, NDCG = %.4f/%.4f/%.4f" % (Recall[0], Recall[1], Recall[2], NDCG[0], NDCG[1], NDCG[2]))
 
         return Metric_best
 
@@ -346,6 +352,16 @@ def init_logging_and_result(args):
         print(Log_dir_name + '/' + filename, 'already exists, skipping ...')
         exit(0)
 
+def binarize_dataset(threshold, training_users, training_items, training_ratings):
+    for i in range(len(training_ratings)):
+        if training_ratings[i] > threshold:
+            training_ratings[i] = 1
+        else:
+            training_ratings[i] = 0
+    training_users = [training_users[i] for i in range(len(training_ratings)) if training_ratings[i] != 0]
+    training_items = [training_items[i] for i in range(len(training_ratings)) if training_ratings[i] != 0]
+    training_ratings = [rating for rating in training_ratings if rating != 0]
+    return training_users, training_items, training_ratings
 
 def run():
     args = parse_args()
@@ -357,10 +373,39 @@ def run():
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
     setproctitle.setproctitle(args.process_name)
 
-    train_data = pickle.load(open('./ml1m/train.pkl', 'rb'))
-    val_data = pickle.load(open('./ml1m/val.pkl', 'rb'))
-    test_data = pickle.load(open('./ml1m/test.pkl', 'rb'))
-    test_data_neg = pickle.load(open('./ml1m/test_neg.pkl', 'rb'))
+    # train_data = pickle.load(open('./ml1m/train.pkl', 'rb'))
+    # val_data = pickle.load(open('./ml1m/val.pkl', 'rb'))
+    # test_data = pickle.load(open('./ml1m/test.pkl', 'rb'))
+    # test_data_neg = pickle.load(open('./ml1m/test_neg.pkl', 'rb'))
+
+    if args.dataset in ['TAFA-digital-music', 'TAFA-cd', 'TAFA-grocery']:
+        train = pickle.load(open('./dataset/'+args.dataset+'/train.pkl', "rb"))
+        train_users, train_items, train_ratings = train
+        train_users, train_items, train_ratings = binarize_dataset(3, train_users, train_items, train_ratings)
+        train_data = []
+        for uid, iid in zip(train_users, train_items):
+            train_data.append([uid, iid])
+
+        test = pickle.load(open('./dataset/'+args.dataset+'/test.pkl', "rb"))
+        test_users, test_items, test_ratings = test
+        test_users, test_items, test_ratings = binarize_dataset(3, test_users, test_items, test_ratings)
+        test_data = []
+        for uid, iid in zip(test_users, test_items):
+            test_data.append([uid, iid])
+
+    elif args.dataset in ['amazon-book20', 'amazon-cd', 'yelp4']:
+        train = pickle.load(open('./dataset/'+args.dataset+'/train.pkl', "rb"))
+        train_data = []
+        for user, items in train.items():
+            for item in items:
+                train_data.append([user, item])
+
+        test = pickle.load(open('./dataset/'+args.dataset+'/test.pkl', "rb"))
+        test_data = []
+        for user, items in test.items():
+            for item in items:
+                test_data.append([user, item])
+
 
     num_user = max(np.max(train_data[:, 0]), np.max(test_data[:, 0])) + 1
     num_item = max(np.max(train_data[:, 1]), np.max(test_data[:, 1])) + 1
@@ -373,7 +418,7 @@ def run():
             tf.set_random_seed(1)
         model = MODEL(args, num_user, num_item)
         model.build_graph()
-        training(model, args, train_data, val_data, test_data, test_data_neg, num_user, num_item)
+        training(model, args, train_data, test_data, num_user, num_item)
 
 
 if __name__ == '__main__':
