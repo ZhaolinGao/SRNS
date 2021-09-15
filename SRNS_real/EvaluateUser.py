@@ -39,26 +39,29 @@ def recall_at_k(actual, predicted, topk):
     return sum_recall / true_users
 
 def eval(model, sess, train_data, test_data, num_user, num_item):
-    batch_size = 5
+    batch_size = 40000
     current_user = 0
     predictions = []
 
-    for i in range(num_user//batch_size + 1):
-        if current_user+batch_size >= num_user:
-            users = np.arange(current_user, num_user)
-            size = num_user-current_user
-        else:
-            users = np.arange(current_user, current_user+batch_size)
-            current_user += batch_size
-            size = batch_size
+    for i in range(num_user):
+        prediction = []
+        num_batch = 0
+        for j in range(num_item//batch_size):
+            users = np.expand_dims(np.repeat(i, batch_size), axis=1)
+            items = np.expand_dims(np.arange(j*batch_size, (j+1)*batch_size), axis=1)
+            feed_dict = {model.user_input:users,
+                         model.item_input_pos:items}
+            prediction.append(np.reshape(sess.run([model.score],feed_dict),[1, batch_size]))
+            num_batch = j+1
 
-        users = np.expand_dims(np.repeat(users, num_item), axis=1)
-        items = np.expand_dims(np.arange(num_item), axis=1)
-        items = np.repeat(items, size, axis=1).transpose().reshape((-1, 1))
+        if num_item%batch_size != 0:
+            users = np.expand_dims(np.repeat(i, num_item-num_batch*batch_size), axis=1)
+            items = np.expand_dims(np.arange(num_batch*batch_size, num_item), axis=1)
+            feed_dict = {model.user_input:users,
+                         model.item_input_pos:items}
+            prediction.append(np.reshape(sess.run([model.score],feed_dict),[1, num_item-num_batch*batch_size]))
 
-        feed_dict = {model.user_input:users,
-                     model.item_input_pos:items}
-        predictions.append(np.reshape(sess.run([model.score],feed_dict),[size, num_item]))
+        predictions.append(np.concatenate(prediction, axis=1))
 
     predictions = np.concatenate(predictions, axis=0)
 
