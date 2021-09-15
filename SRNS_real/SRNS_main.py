@@ -386,7 +386,7 @@ def run():
         for uid, iid in zip(train_users, train_items):
             train_data.append([uid, iid])
 
-        test = pickle.load(open('./dataset/'+args.dataset+'/test.pkl', "rb"))
+        test = pickle.load(open('./dataset/'+args.dataset+'/val.pkl', "rb"))
         test_users, test_items, test_ratings = test
         test_users, test_items, test_ratings = binarize_dataset(3, test_users, test_items, test_ratings)
         test_data = []
