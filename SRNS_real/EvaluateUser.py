@@ -39,7 +39,7 @@ def recall_at_k(actual, predicted, topk):
     return sum_recall / true_users
 
 def eval(model, sess, train_data, test_data, num_user, num_item):
-    batch_size = 10
+    batch_size = 5
     current_user = 0
     predictions = []
 
