@@ -143,7 +143,7 @@ def training(model, args, train_data, test_data, num_user, num_item):
                                         score_cand_cur, score_pos_cur, Mu_idx, candidate_cur, train_iddict)
             train_time = time() - train_begin
 
-            if (epoch_count+1) % 3 == 0:
+            if (epoch_count+1) % 1 == 0:
                 valid_begin = time()
                 Recall, NDCG = EvalUser.eval(model, sess, train_mat, test_set, num_user, num_item)
                 valid_time = time() - valid_begin
