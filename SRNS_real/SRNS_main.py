@@ -183,7 +183,7 @@ def training(model, args, train_data, test_data, num_user, num_item):
             score_cand_nxt[4] = np.zeros((0, num_user, args.varset_size))
 
             if Recall[0] > Metric_best:
-                Model_byR1_param = sess.run([model.embeddingmap_user, model.embeddingmap_item, model.h])
+                # Model_byR1_param = sess.run([model.embeddingmap_user, model.embeddingmap_item, model.h])
                 Metric_best = Recall[0]
                 if args.save_model:
                     if not os.path.exists("Model-Final"):
@@ -199,12 +199,12 @@ def training(model, args, train_data, test_data, num_user, num_item):
                     break
 
         # Test via Model_byR1_param
-        sess.run(tf.assign(model.embeddingmap_user, Model_byR1_param[0]))
-        sess.run(tf.assign(model.embeddingmap_item, Model_byR1_param[1]))
-        sess.run(tf.assign(model.h, Model_byR1_param[2]))
-        Recall, NDCG = EvalUser.eval(model, sess, train_mat, test_set, num_user, num_item)
-        print("Test data via Model_byR1_param: Recall = %.4f/%.4f/%.4f, NDCG = %.4f/%.4f/%.4f" % (Recall[0], Recall[1], Recall[2], NDCG[0], NDCG[1], NDCG[2]))
-        logging.info("Test data via Model_byR1_param: Recall = %.4f/%.4f/%.4f, NDCG = %.4f/%.4f/%.4f" % (Recall[0], Recall[1], Recall[2], NDCG[0], NDCG[1], NDCG[2]))
+        # sess.run(tf.assign(model.embeddingmap_user, Model_byR1_param[0]))
+        # sess.run(tf.assign(model.embeddingmap_item, Model_byR1_param[1]))
+        # sess.run(tf.assign(model.h, Model_byR1_param[2]))
+        # Recall, NDCG = EvalUser.eval(model, sess, train_mat, test_set, num_user, num_item)
+        # print("Test data via Model_byR1_param: Recall = %.4f/%.4f/%.4f, NDCG = %.4f/%.4f/%.4f" % (Recall[0], Recall[1], Recall[2], NDCG[0], NDCG[1], NDCG[2]))
+        # logging.info("Test data via Model_byR1_param: Recall = %.4f/%.4f/%.4f, NDCG = %.4f/%.4f/%.4f" % (Recall[0], Recall[1], Recall[2], NDCG[0], NDCG[1], NDCG[2]))
 
         return Metric_best
 
@@ -273,7 +273,7 @@ def training_batch(model, sess, batches, args, epoch_cur, train_data, num_item,
                                         * variance_candidates_all, axis=1)
         else:
             item_arg_all = np.argmax(variance_candidates_all, axis=1)
-        example_weight = np.ones((len(user_batch[batch_idx]),1), dtype=np.float)
+        example_weight = np.ones((len(user_batch[batch_idx]),1), dtype=float)
 
         for i in range(len(user_batch[batch_idx])):
             negitems.append(candidate_cur[user_batch[batch_idx][i], negitems_candidates_all[i, item_arg_all[i]]])
