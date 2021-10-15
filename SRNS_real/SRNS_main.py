@@ -425,6 +425,11 @@ def run():
             model = BPR(args, num_user, num_item)
         elif args.model == 'ncf':
             model = NCF(args, num_user, num_item)
+        elif args.model == 'cml':
+            model = CML(args, num_user, num_item)
+        elif args.model == 'lgn':
+            norm_adj = sp.load_npz('./dataset/'+args.dataset+'/s_pre_adj_mat.npz')
+            model = LGN(args, num_user, num_item, graph)
 
         model.build_graph()
         training(model, args, train_data, test_data, num_user, num_item)

@@ -218,5 +218,172 @@ class NCF():
         pickle.dump(param,open(id,'wb'))
 
 
+class CML():
+    def __init__(self, args, num_user, num_item):
+        self.learning_rate = args.lr
+        self.opt = args.optimizer
+        self.regs = float(args.regs)
+        self.batch_size=args.batch_size
+        self.model_file = args.model_file
+        self.num_user = num_user
+        self.num_item = num_item
+        self.embedding_size = args.embedding_size
+        self.use_pretrain = args.use_pretrain
+        self.model = args.model
 
 
+    def _create_placeholders(self):
+        self.user_input=tf.placeholder(tf.int32,shape=[None,1],name="user_input")
+        self.item_input_pos=tf.placeholder(tf.int32,shape=[None,1],name="item_input_pos")
+        self.item_input_neg=tf.placeholder(tf.int32,shape=[None,1],name="item_input_neg")
+        self.example_weight=tf.placeholder(tf.float32,shape=[None,1],name="example_weight")
+
+
+    def _create_variables(self, model):
+
+        self.embeddingmap_user = tf.Variable(
+                tf.truncated_normal(shape=[self.num_user, self.embedding_size], mean=0.0, stddev=0.01),
+                                    name='embedding_user', dtype=tf.float32)
+        self.embeddingmap_item = tf.Variable(
+                tf.truncated_normal(shape=[self.num_item, self.embedding_size], mean=0.0, stddev=0.01),
+                                    name='embedding_item', dtype=tf.float32)
+
+        
+    def _create_loss(self):
+        # score, score_neg, 
+        embedding_user = tf.nn.embedding_lookup(self.embeddingmap_user,self.user_input)
+        embedding_user = tf.reshape(embedding_user,[-1,self.embedding_size])
+
+        embedding_item_pos = tf.nn.embedding_lookup(self.embeddingmap_item,self.item_input_pos)
+        embedding_item_pos = tf.reshape(embedding_item_pos,[-1,self.embedding_size])
+
+        embedding_item_neg = tf.nn.embedding_lookup(self.embeddingmap_item,self.item_input_neg)
+        embedding_item_neg = tf.reshape(embedding_item_neg,[-1,self.embedding_size])
+
+        self.score = tf.reshape(tf.math.reduce_sum(-tf.math.square(embedding_user - embedding_item_pos), -1),[-1,1])
+        self.score_neg = tf.reshape(tf.math.reduce_sum(-tf.math.square(embedding_user - embedding_item_neg), -1),[-1,1])
+
+        self.regularizer = tf.contrib.layers.l2_regularizer(self.regs)
+        if self.regs!=0.0:
+            self.loss_reg = self.regularizer(embedding_user)+self.regularizer(embedding_item_pos)+self.regularizer(embedding_item_neg)
+        else:
+            self.loss_reg = 0
+
+        self.loss_vanilla = tf.reduce_sum(tf.nn.relu(self.score_neg - self.score + 1.0))
+        self.loss = self.loss_vanilla + self.loss_reg
+
+
+    def _create_optimizer(self):
+        self.optimizer = tf.train.AdamOptimizer(
+                learning_rate=self.learning_rate,name='adam_opt').minimize(self.loss)
+
+
+    def build_graph(self):
+        graph = tf.get_default_graph()
+        with graph.as_default() as g:
+            with g.name_scope("GMF"):
+                self._create_placeholders()
+                self._create_variables(self.model_file)
+                self._create_loss()
+                self._create_optimizer()
+       
+
+    def save_model_withpath(self,sess,id):
+        param = []
+        embedding=sess.run([self.embeddingmap_user, self.embeddingmap_item, self.h])
+        for each in embedding:
+            param.append(each)
+        pickle.dump(param,open(id,'wb'))
+
+
+class LGN():
+    def __init__(self, args, num_user, num_item, graph):
+        self.learning_rate = args.lr
+        self.opt = args.optimizer
+        self.regs = float(args.regs)
+        self.batch_size=args.batch_size
+        self.model_file = args.model_file
+        self.num_user = num_user
+        self.num_item = num_item
+        self.embedding_size = args.embedding_size
+        self.use_pretrain = args.use_pretrain
+        self.model = args.model
+        self.graph = graph
+
+
+    def _create_placeholders(self):
+        self.user_input=tf.placeholder(tf.int32,shape=[None,1],name="user_input")
+        self.item_input_pos=tf.placeholder(tf.int32,shape=[None,1],name="item_input_pos")
+        self.item_input_neg=tf.placeholder(tf.int32,shape=[None,1],name="item_input_neg")
+        self.example_weight=tf.placeholder(tf.float32,shape=[None,1],name="example_weight")
+
+
+    def _create_variables(self, model):
+
+        self.embeddingmap_user = tf.Variable(
+                tf.truncated_normal(shape=[self.num_user, self.embedding_size], mean=0.0, stddev=0.01),
+                                    name='embedding_user', dtype=tf.float32)
+        self.embeddingmap_item = tf.Variable(
+                tf.truncated_normal(shape=[self.num_item, self.embedding_size], mean=0.0, stddev=0.01),
+                                    name='embedding_item', dtype=tf.float32)
+
+        coo = graph.tocoo().astype(np.float32)
+        index = tf.stack([tf.Tensor(coo.row), tf.Tensor(coo.col)], dtype=tf.int64)
+        self.sparse_graph = tf.sparse.SparseTensor(index, tf.Tensor(coo.data, dtype=tf.float32), tf.Tensor(coo.shape, dtype=tf.int64))
+
+        
+    def _create_loss(self):
+
+        all_emb = tf.concat([self.embeddingmap_user, self.embeddingmap_item], 0)
+        embs = all_emb
+
+        for layer in range(3):
+            all_emb = torch.sparse.mm(self.sparse_graph, all_emb)
+            embs += all_emb
+
+        user_emb, item_emb = tf.split(embs, [self.num_user, self.num_item], axis=0)
+
+        # score, score_neg, 
+        embedding_user = tf.nn.embedding_lookup(user_emb,self.user_input)
+        embedding_user = tf.reshape(embedding_user,[-1,self.embedding_size])
+
+        embedding_item_pos = tf.nn.embedding_lookup(item_emb,self.item_input_pos)
+        embedding_item_pos = tf.reshape(embedding_item_pos,[-1,self.embedding_size])
+
+        embedding_item_neg = tf.nn.embedding_lookup(item_emb,self.item_input_neg)
+        embedding_item_neg = tf.reshape(embedding_item_neg,[-1,self.embedding_size])
+
+        self.score = tf.reshape(tf.reduce_sum(embedding_user * embedding_item_pos, axis=1),[-1,1])
+        self.score_neg = tf.reshape(tf.reduce_sum(embedding_user * embedding_item_neg, axis=1),[-1,1])
+
+        self.regularizer = tf.contrib.layers.l2_regularizer(self.regs)
+        if self.regs!=0.0:
+            self.loss_reg = self.regularizer(self.embeddingmap_user)+self.regularizer(self.embeddingmap_item)
+        else:
+            self.loss_reg = 0
+
+        self.loss_vanilla = tf.reduce_sum(tf.log(1 + tf.exp(self.score_neg - self.score - 1e-8)))
+        self.loss = self.loss_vanilla + self.loss_reg
+
+
+    def _create_optimizer(self):
+        self.optimizer = tf.train.AdamOptimizer(
+                learning_rate=self.learning_rate,name='adam_opt').minimize(self.loss)
+
+
+    def build_graph(self):
+        graph = tf.get_default_graph()
+        with graph.as_default() as g:
+            with g.name_scope("GMF"):
+                self._create_placeholders()
+                self._create_variables(self.model_file)
+                self._create_loss()
+                self._create_optimizer()
+       
+
+    def save_model_withpath(self,sess,id):
+        param = []
+        embedding=sess.run([self.embeddingmap_user, self.embeddingmap_item, self.h])
+        for each in embedding:
+            param.append(each)
+        pickle.dump(param,open(id,'wb'))
