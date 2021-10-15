@@ -328,7 +328,7 @@ class LGN():
                                     name='embedding_item', dtype=tf.float32)
 
         coo = self.graph.tocoo().astype(np.float32)
-        index = tf.stack([tf.constant(coo.row, dtype=tf.int64), tf.constant(coo.col, dtype=tf.int64)], dtype=tf.int64)
+        index = tf.stack([tf.constant(coo.row, dtype=tf.int64), tf.constant(coo.col, dtype=tf.int64)])
         self.sparse_graph = tf.sparse.SparseTensor(index, tf.Tensor(coo.data, dtype=tf.float32), tf.Tensor(coo.shape, dtype=tf.int64))
 
         
