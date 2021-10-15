@@ -185,7 +185,7 @@ class NCF():
 
         self.regularizer = tf.contrib.layers.l2_regularizer(self.regs)
         if self.regs!=0.0:
-            self.loss_reg = self.regularizer(embedding_user_GMF)+self.regularizer(embedding_item_pos_GMF)+self.regularizer(embedding_item_neg_GMF)+
+            self.loss_reg = self.regularizer(embedding_user_GMF)+self.regularizer(embedding_item_pos_GMF)+self.regularizer(embedding_item_neg_GMF)+\
                                 self.regularizer(embedding_user_MLP)+self.regularizer(embedding_item_pos_MLP)+self.regularizer(embedding_item_neg_MLP)
         else:
             self.loss_reg = 0
