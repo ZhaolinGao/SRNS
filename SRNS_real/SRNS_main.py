@@ -7,7 +7,7 @@ import sys
 from tqdm import tqdm
 import random
 import logging
-from Model import BPR, NCF
+from Model import BPR, NCF, CML, LGN
 import argparse
 import BatchGenUser as BatchUser
 import EvaluateUser as EvalUser
