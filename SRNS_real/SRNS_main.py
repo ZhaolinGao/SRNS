@@ -7,7 +7,7 @@ import sys
 from tqdm import tqdm
 import random
 import logging
-from Model import MODEL
+from Model import BPR, NCF
 import argparse
 import BatchGenUser as BatchUser
 import EvaluateUser as EvalUser
@@ -67,6 +67,8 @@ def parse_args():
                         help='model file path')
     parser.add_argument('--S2_div_S1', type=int, default=1,
                         help='cache size of cache than cache1')
+    parser.add_argument('--model', type=str, default='bpr', 
+                        help='different model, support [bpr, cml, ncf, lgn]')
     return parser.parse_args()
 
 
@@ -418,7 +420,12 @@ def run():
     with graph.as_default():
         if args.fix_seed:
             tf.set_random_seed(1)
-        model = MODEL(args, num_user, num_item)
+
+        if args.model == 'bpr':
+            model = BPR(args, num_user, num_item)
+        elif args.model == 'ncf':
+            model = NCF(args, num_user, num_item)
+
         model.build_graph()
         training(model, args, train_data, test_data, num_user, num_item)
 
