@@ -351,9 +351,9 @@ def init_logging_and_result(args):
         filename += "_use_pretrain"
     if not os.path.exists(Log_dir_name + '/' + filename):
         logging.basicConfig(filename=Log_dir_name + '/' + filename, level=logging.INFO)
-    else:
-        print(Log_dir_name + '/' + filename, 'already exists, skipping ...')
-        exit(0)
+    # else:
+    #     print(Log_dir_name + '/' + filename, 'already exists, skipping ...')
+    #     exit(0)
 
 def binarize_dataset(threshold, training_users, training_items, training_ratings):
     for i in range(len(training_ratings)):
