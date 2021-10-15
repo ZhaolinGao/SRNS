@@ -327,7 +327,7 @@ class LGN():
                 tf.truncated_normal(shape=[self.num_item, self.embedding_size], mean=0.0, stddev=0.01),
                                     name='embedding_item', dtype=tf.float32)
 
-        coo = graph.tocoo().astype(np.float32)
+        coo = self.graph.tocoo().astype(np.float32)
         index = tf.stack([tf.Tensor(coo.row), tf.Tensor(coo.col)], dtype=tf.int64)
         self.sparse_graph = tf.sparse.SparseTensor(index, tf.Tensor(coo.data, dtype=tf.float32), tf.Tensor(coo.shape, dtype=tf.int64))
 
