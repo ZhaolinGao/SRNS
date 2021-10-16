@@ -338,7 +338,7 @@ class LGN():
         embs = all_emb
 
         for layer in range(3):
-            all_emb = torch.sparse.mm(self.sparse_graph, all_emb)
+            all_emb = tf.sparse.sparse_dense_matmul(self.sparse_graph, all_emb)
             embs += all_emb
 
         user_emb, item_emb = tf.split(embs, [self.num_user, self.num_item], axis=0)
