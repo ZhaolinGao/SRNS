@@ -329,6 +329,7 @@ class LGN():
 
         coo = self.graph.tocoo().astype(np.float32)
         index = tf.stack([tf.constant(coo.row, dtype=tf.int64), tf.constant(coo.col, dtype=tf.int64)])
+        print(index.shape)
         self.sparse_graph = tf.sparse.SparseTensor(index, tf.constant(coo.data, dtype=tf.float32), coo.shape)
 
         
