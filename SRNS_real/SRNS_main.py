@@ -217,7 +217,7 @@ def training_batch(model, sess, batches, args, epoch_cur, train_data, num_item,
     avg_time_per_batch = 0.
 
     for batch_idx in tqdm(range(num_batch)):
-        start = time.time()
+        start = time()
         negitems=[]
         negitems_candidates_all = []
         for i in range(len(user_batch[batch_idx])):
@@ -328,7 +328,7 @@ def training_batch(model, sess, batches, args, epoch_cur, train_data, num_item,
                         model.example_weight: example_weight}
         _, loss = sess.run([model.optimizer, model.loss], feed_dict)
         loss_average += loss
-        avg_time_per_batch += (time.time() - start) / num_batch
+        avg_time_per_batch += (time() - start) / num_batch
 
     loss_average /= train_data.shape[0]
     print("average time per batch:", avg_time_per_batch)
